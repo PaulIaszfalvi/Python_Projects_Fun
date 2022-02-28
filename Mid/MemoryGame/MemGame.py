@@ -5,94 +5,82 @@ from tkinter import *
 from PIL import Image, ImageTk
 import glob
 import os, os.path
+import numpy as np
+
+
+#resize images and button
+imgButtonWidth = 100
+imgButtonHeight = 100
+imgButtonSize = (imgButtonWidth,imgButtonHeight)
+#Set the height and width of the game by number of items. 
+width = 6
+height = 6
+buttons = [[None]*width]*height
+#Total number of items 36 (0-35)
+count = width*height-1
+buttonList = []
+
+blackImage = Image.new('RGB', (imgButtonWidth, imgButtonHeight), (0,0,0))
+#hiddenImage = ImageTk.PhotoImage(blackImage)
 
 # Fetch images from location and create a list of Image objects, then return.
 def getImages():
     imgs = []
     path = "/home/paul/Programming/Python/MyMiniProjects/Mid/MemoryGame/"
     valid_images = [".jpg",".gif",".png",".tga"]
+    
     for f in os.listdir(path):
         ext = os.path.splitext(f)[1]
         if ext.lower() not in valid_images:
             continue
-        imgs.append(Image.open(os.path.join(path,f)))
+        imgs.append([Image.open(os.path.join(path,f)).resize(imgButtonSize), f])
     return imgs + imgs
-
-#Set the height and width of the game by number of items. 
-width = 6
-height = 6
-buttons = [[None]*width]*height
 
 # Create frame, set default size of frame and background color.
 ws = Tk()
-ws.title('PythonGuides')
-ws.geometry('1000x1000')
-ws.config(bg='#0080FF')
+ws.title('Memory Game')
+ws.geometry(str(imgButtonWidth * (width+1)) + "x" + str(imgButtonHeight * (height+1)))
+ws.config(bg='darkblue')
 
-frame = Frame(ws, bg='#0080FF')
+frame = Frame(ws, bg='darkblue')
 
-
-# image_list = []
-# for filename in glob.glob('/home/paul/Programming/Python/MyMiniProjects/Mid/MemoryGame/'): #assuming gif
-#     im=Image.open(filename)
-#     image_list.append(im)
-
-
-count = 35
-
+#Shuffle images for the game
 imgs = getImages()
 random.shuffle(imgs)
 
-def buttonClicked(w, h):
-    print(buttons[w][h])
-   #self.state=DISABLED
+def buttonClicked(picture, id, button):
+    print(button.location)
+    button["image"] = picture        
+    
+    
 
-# def createButton(w,h,imgs):
-#     buttonPairs = []
-#     for i in  range(int(w*h/2)):
-#         picture = imgs[i]
-#         button = Button(frame, image=picture, state=NORMAL, command= lambda: buttonClicked( w, h))
-#         button.image = picture
-#         buttonPairs.append(button)
-#         buttonPairs.append(button)
-#     return buttonPairs
-
-# print(createButton(width, height, imgs))
-
-buttonList = []
-
-for w in range(width):
-    for h in range(height):
-        picture = ImageTk.PhotoImage(imgs.pop(count))
-        buttons[w][h] = Button(frame, image=picture, state=NORMAL, command= lambda width_placeholder=w, height_placeholder=h: buttonClicked(width_placeholder, height_placeholder))
-        buttons[w][h].image = picture
-        buttons[w][h].name = str(w + h)
+#Create the actual buttons with their respective image 
+for h in range(height):    #print(buttons[w][::],"\n")    
+   for w in range(width):        
+        tempImage = imgs.pop(count)
+        picture = ImageTk.PhotoImage(tempImage[0])
+        id = tempImage[1]
+        hiddenImg = ImageTk.PhotoImage(blackImage)
+        buttons[h][w] = Button(frame, image=hiddenImg,  state=NORMAL, height=imgButtonHeight, width=imgButtonWidth, 
+        command= lambda pic_temp=picture, id_temp=id, button_temp=buttons[h][w]: buttonClicked(pic_temp, id_temp, button_temp))
+        buttons[h][w].image = hiddenImg      
+        
+        #buttons[w][h].name = str(w + h)
         #buttons[w][h].grid(row=w, column=h, ipadx=random.randint(0,40), ipady=random.randint(0,40), padx=random.randint(0,5), pady=random.randint(0,5))
-        buttons[w][h].grid(row=w, column=h, padx=5, pady=5)
-
+        buttons[h][w].grid(row=h, column=w, padx=1, pady=1)
+        
         #Button(frame, image=picture).grid(row=w, column=h, ipadx=random.randint(0,40), ipady=random.randint(0,40), padx=random.randint(0,5), pady=random.randint(0,5))
         count -= 1
-        buttonList.append(buttons[w][h])
-      
-for x in buttonList:
-    #x.grid()
-    pass
+       # buttonList.append(buttons[h][w])
+ 
 
-# Button(frame, text="7").grid(row=0, column=0, sticky='ew')
-# Button(frame, text="8").grid(row=0, column=1)
-# Button(frame, text="9").grid(row=0, column=2)
 
-# Button(frame, text="4 ").grid(row=1, column=0)
-# Button(frame, text="5").grid(row=1, column=1, ipadx=10, ipady=10, padx=10, pady=10)
-# Button(frame, text="6").grid(row=1, column=2)
 
-# Button(frame, text="7 ").grid(row=2, column=0)
-# Button(frame, text="8").grid(row=2, column=1)
-# Button(frame, text="9").grid(row=2, column=2)
 
 frame.pack(expand=True) 
 
 ws.mainloop()
+
 
 # root = Tk()
 # root.title('Matchmaker')
@@ -146,3 +134,20 @@ ws.mainloop()
 #     app = App()
 #     app.mainloop()
 
+# def createButton(w,h,imgs):
+#     buttonPairs = []
+#     for i in  range(int(w*h/2)):
+#         picture = imgs[i]
+#         button = Button(frame, image=picture, state=NORMAL, command= lambda: buttonClicked( w, h))
+#         button.image = picture
+#         buttonPairs.append(button)
+#         buttonPairs.append(button)
+#     return buttonPairs
+
+# print(createButton(width, height, imgs))
+
+
+# image_list = []
+# for filename in glob.glob('/home/paul/Programming/Python/MyMiniProjects/Mid/MemoryGame/'): #assuming gif
+#     im=Image.open(filename)
+#     image_list.append(im)

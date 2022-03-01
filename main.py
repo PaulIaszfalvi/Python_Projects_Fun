@@ -6,6 +6,8 @@ from Basic import plusOne
 from Basic import multiplyStrings
 from Basic import longestSubstring
 from Basic import romanToInt
+from Basic import reverseInteger
+from Basic import reverseRomanToInt
 
 # f = fileReader.FileReader()
 # f.writeFile("personal_info.txt", "Hello World!")
@@ -34,6 +36,12 @@ from Basic import romanToInt
 # longest_substring = longestSubstring.LongestSubstring()
 # print(longest_substring.lengthOfLongestSubstring("pwwkew"))
 
-romanInt = romanToInt.RomanToInt()
-print(romanInt.convert("MCMXXCIV")
-)
+# romanInt = romanToInt.RomanToInt()
+# print(romanInt.convert("MCMXXCIV")
+# )
+
+# reverseInt = reverseInteger.ReverseInteger()
+# print(reverseInt.reverse(-12330))
+
+reverseRoman = reverseRomanToInt.ReverseRoman()
+print(reverseRoman.reverse("IV"))

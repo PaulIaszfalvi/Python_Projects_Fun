@@ -2,6 +2,7 @@ import random
 import time
 import tkinter as tk
 from tkinter import *
+from typing_extensions import Self
 from PIL import Image, ImageTk
 import glob
 import os, os.path
@@ -15,13 +16,12 @@ imgButtonSize = (imgButtonWidth,imgButtonHeight)
 #Set the height and width of the game by number of items. 
 width = 6
 height = 6
-buttons = [[None]*width]*height
+#buttons = [[Button]*width]*height
 #Total number of items 36 (0-35)
 count = width*height-1
 buttonList = []
-
-blackImage = Image.new('RGB', (imgButtonWidth, imgButtonHeight), (0,0,0))
-#hiddenImage = ImageTk.PhotoImage(blackImage)
+answersList = []
+clickedCount = 0
 
 # Fetch images from location and create a list of Image objects, then return.
 def getImages():
@@ -48,33 +48,56 @@ frame = Frame(ws, bg='darkblue')
 imgs = getImages()
 random.shuffle(imgs)
 
+#Simple image to cover the tiles
+hiddenImg = ImageTk.PhotoImage(Image.new('RGB', (imgButtonWidth, imgButtonHeight), (0,0,105)))
+
 def buttonClicked(picture, id, button):
-    print(button.location)
-    button["image"] = picture        
-    
-    
+    global clickedCount, answersList
+
+    if button.image == hiddenImg and clickedCount < 2:  
+        button["image"] = picture           
+        clickedCount += 1     
+        answersList.append([button, id])        
+    elif len(answersList) == 2:        
+        #Check id but make sure it's not the same button pressed twice
+        if answersList[0][1] == answersList[1][1] and answersList[0][0] != answersList[1][0]:
+            clickedCount = 0
+            for a in answersList:
+                a[0]["state"] = "disabled"
+            answersList = []
+        else:             
+            clickedCount = 0                      
+            for a in answersList:
+                a[0]["image"] = hiddenImg
+            answersList = []
+   
 
 #Create the actual buttons with their respective image 
 for h in range(height):    #print(buttons[w][::],"\n")    
-   for w in range(width):        
+    newList = []
+    for w in range(width):        
         tempImage = imgs.pop(count)
         picture = ImageTk.PhotoImage(tempImage[0])
-        id = tempImage[1]
-        hiddenImg = ImageTk.PhotoImage(blackImage)
-        buttons[h][w] = Button(frame, image=hiddenImg,  state=NORMAL, height=imgButtonHeight, width=imgButtonWidth, 
-        command= lambda pic_temp=picture, id_temp=id, button_temp=buttons[h][w]: buttonClicked(pic_temp, id_temp, button_temp))
-        buttons[h][w].image = hiddenImg      
+        id = tempImage[1]        
+        button = Button(frame, image=hiddenImg,  state=NORMAL, height=imgButtonHeight, width=imgButtonWidth) 
+        #Need to split this up because of how python handles closures
+        button["command"] = lambda pic_temp=picture, id_temp=id, button_temp = button: buttonClicked(pic_temp, id_temp, button_temp)
+        button.image = hiddenImg      
         
         #buttons[w][h].name = str(w + h)
         #buttons[w][h].grid(row=w, column=h, ipadx=random.randint(0,40), ipady=random.randint(0,40), padx=random.randint(0,5), pady=random.randint(0,5))
-        buttons[h][w].grid(row=h, column=w, padx=1, pady=1)
+        button.grid(row=h, column=w, padx=1, pady=1)
         
         #Button(frame, image=picture).grid(row=w, column=h, ipadx=random.randint(0,40), ipady=random.randint(0,40), padx=random.randint(0,5), pady=random.randint(0,5))
         count -= 1
        # buttonList.append(buttons[h][w])
- 
+        newList.append(button)
+    buttonList.append(newList)
 
-
+# for y in range(height):
+#     for x in range(width):
+#         print(ButtonList[y][x])
+#     print("")
 
 
 frame.pack(expand=True) 

@@ -1,4 +1,7 @@
+from locale import normalize
+from multiprocessing.spawn import import_main_path
 import random
+from re import A
 import time
 import tkinter as tk
 from tkinter import *
@@ -7,6 +10,7 @@ from PIL import Image, ImageTk
 import glob
 import os, os.path
 import numpy as np
+from sqlalchemy import null
 
 
 #resize images and button
@@ -18,11 +22,22 @@ width = 6
 height = 6
 #buttons = [[Button]*width]*height
 #Total number of items 36 (0-35)
-count = width*height-1
+#count = width*height-1
 buttonList = []
+#Will be a 2d array of [button, id]
 answersList = []
 clickedCount = 0
+imgs = []
+imgAnswers = [[None]*height]*width
+hiddenImg = null
 
+# Create frame, set default size of frame and background color.
+root = Tk()
+root.title('Memory Game')
+root.geometry(str(imgButtonWidth * (width+1)) + "x" + str(imgButtonHeight * (height+1)))
+root.config(bg='darkblue')
+
+frame = Frame(root, bg='darkblue')
 # Fetch images from location and create a list of Image objects, then return.
 def getImages():
     imgs = []
@@ -36,14 +51,6 @@ def getImages():
         imgs.append([Image.open(os.path.join(path,f)).resize(imgButtonSize), f])
     return imgs + imgs
 
-# Create frame, set default size of frame and background color.
-ws = Tk()
-ws.title('Memory Game')
-ws.geometry(str(imgButtonWidth * (width+1)) + "x" + str(imgButtonHeight * (height+1)))
-ws.config(bg='darkblue')
-
-frame = Frame(ws, bg='darkblue')
-
 #Shuffle images for the game
 imgs = getImages()
 random.shuffle(imgs)
@@ -51,48 +58,79 @@ random.shuffle(imgs)
 #Simple image to cover the tiles
 hiddenImg = ImageTk.PhotoImage(Image.new('RGB', (imgButtonWidth, imgButtonHeight), (0,0,105)))
 
-def buttonClicked(picture, id, button):
+#Disable buttons after a match
+def disable():
     global clickedCount, answersList
 
-    if button.image == hiddenImg and clickedCount < 2:  
-        button["image"] = picture           
-        clickedCount += 1     
-        answersList.append([button, id])        
-    elif len(answersList) == 2:        
+    clickedCount = 0
+    for a in answersList:
+        a[0].config(state=DISABLED, bg="green")
+        # a[0]["state"] = "disabled"
+        # a[0]["bg"] = "green"
+    answersList = []
+#Hide buttons again
+def hide():
+    global clickedCount, answersList  
+              
+    for answers in answersList:               
+    #     #a[0].config(image = hiddenImg)            
+        answers[0].config(image=hiddenImg, state=NORMAL, bg="white")#, bg="white")    
+        # answers[0]["image"] = hiddenImg              
+        # answers[0]["state"] = "normal"    
+        # answers[0]["bg"] = "white"    
+def show():
+    global answersList
+
+    for answer in answersList:
+        answer[0].config(image=answer[2], state=DISABLED, bg="yellow")                 
+       
+def wrong():
+    for a in answersList:
+        a[0]["bg"] = "red"
+    
+def buttonClicked(picture,row, col, id, button):
+    global clickedCount, answersList, lastbutton
+    
+    answersList.append([button, id, picture])    
+    #if button.image is hiddenImg:# and clickedCount < 2:       
+    button.config(image=picture, text="clicked", state=DISABLED, bg="yellow") 
+    #Update the button before being hidden again
+    root.update()
+    #show()
+    print(button, row, col, "updated")
+
+    if len(answersList) == 2:  
+             
         #Check id but make sure it's not the same button pressed twice
-        if answersList[0][1] == answersList[1][1] and answersList[0][0] != answersList[1][0]:
-            clickedCount = 0
-            for a in answersList:
-                a[0]["state"] = "disabled"
-            answersList = []
-        else:             
-            clickedCount = 0                      
-            for a in answersList:
-                a[0]["image"] = hiddenImg
-            answersList = []
-   
+        if answersList[0][1] is answersList[1][1]:#and answersList[0][0] is not answersList[1][0]:
+            disable()
+        else:           
+            wrong()             
+            button.after(600, hide())             
+            answersList = [] 
+ 
 
 #Create the actual buttons with their respective image 
 for h in range(height):    #print(buttons[w][::],"\n")    
     newList = []
     for w in range(width):        
-        tempImage = imgs.pop(count)
-        picture = ImageTk.PhotoImage(tempImage[0])
+        tempImage = imgs.pop()
+        root.picture = ImageTk.PhotoImage(tempImage[0])
+        imgAnswers[h][w] = root.picture
         id = tempImage[1]        
-        button = Button(frame, image=hiddenImg,  state=NORMAL, height=imgButtonHeight, width=imgButtonWidth) 
+        button = Button(frame, image=hiddenImg, state=NORMAL, height=imgButtonHeight, width=imgButtonWidth) 
         #Need to split this up because of how python handles closures
-        button["command"] = lambda pic_temp=picture, id_temp=id, button_temp = button: buttonClicked(pic_temp, id_temp, button_temp)
-        button.image = hiddenImg      
-        
+        button.config(command = lambda pic_temp=root.picture, row=h, col=w, id_temp=id, button_temp = button: buttonClicked(pic_temp,row, col, id_temp, button_temp))           
         #buttons[w][h].name = str(w + h)
         #buttons[w][h].grid(row=w, column=h, ipadx=random.randint(0,40), ipady=random.randint(0,40), padx=random.randint(0,5), pady=random.randint(0,5))
-        button.grid(row=h, column=w, padx=1, pady=1)
-        
+        button.grid(row=h, column=w, padx=1, pady=1)       
         #Button(frame, image=picture).grid(row=w, column=h, ipadx=random.randint(0,40), ipady=random.randint(0,40), padx=random.randint(0,5), pady=random.randint(0,5))
-        count -= 1
+      
        # buttonList.append(buttons[h][w])
         newList.append(button)
     buttonList.append(newList)
+
+
 
 # for y in range(height):
 #     for x in range(width):
@@ -102,7 +140,7 @@ for h in range(height):    #print(buttons[w][::],"\n")
 
 frame.pack(expand=True) 
 
-ws.mainloop()
+root.mainloop()
 
 
 # root = Tk()

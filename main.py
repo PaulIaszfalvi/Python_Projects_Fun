@@ -5,10 +5,10 @@ from Basic import binarySearch
 from Basic import plusOne
 from Basic import multiplyStrings
 from Basic import longestSubstring
-from Basic import romanToInt
+#from Basic import romanToInt
 from Basic import reverseInteger
 from Basic import reverseRomanToInt
-
+from Basic import twoSum
 # f = fileReader.FileReader()
 # f.writeFile("personal_info.txt", "Hello World!")
 # f.readFile("personal_info.txt")
@@ -43,5 +43,11 @@ from Basic import reverseRomanToInt
 # reverseInt = reverseInteger.ReverseInteger()
 # print(reverseInt.reverse(-12330))
 
-reverseRoman = reverseRomanToInt.ReverseRoman()
-print(reverseRoman.reverse("IV"))
+# reverseRoman = reverseRomanToInt.ReverseRoman()
+# print(reverseRoman.reverse("IV"))
+
+sumTwo = twoSum.Solution()
+print(sumTwo.twoSum( [2, 7, 11, 15], 9))
+print(sumTwo.twoSum( [0, 4, 3, 0], 0))  
+print(sumTwo.twoSum( [0, 4, 3, 0], 3))  
+print(sumTwo.twoSum([2, 5, 6, 4, 3, 11, 7, 15], 9))

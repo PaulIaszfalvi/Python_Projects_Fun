@@ -3,7 +3,6 @@ import tkinter as tk
 from tkinter import *
 from PIL import Image, ImageTk
 import os, os.path
-from sqlalchemy import null
 
 #resize images and button
 imgButtonWidth = 100
@@ -17,7 +16,7 @@ buttonList = []
 answersList = []
 clickedCount = 0
 imgs = []
-hiddenImg = null
+hiddenImg = None
 
 #Helper function to configure background in Tkinter
 def fromRGB(rgb): 

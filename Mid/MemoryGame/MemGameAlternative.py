@@ -39,6 +39,7 @@ buttons = []
 num_of_cols = 3
 root.resizable(0, 0)
 numfiles = 3
+path = "/home/paul/Programming/Python/Python_Projects_Fun/Mid/MemoryGame/image"
 
 for x in range(0, numfiles):
     if(x % num_of_cols == 0):
@@ -53,6 +54,6 @@ label.grid(row = row_no+1, column = 0, columnspan = num_of_cols)
 label.images=[]
 
 for x in range(0, numfiles):
-    label.images.append(PhotoImage(file="/home/paul/Programming/Python/MyMiniProjects/Mid/MemoryGame/image"+str(x)+".jpg"))
+    label.images.append(PhotoImage(file= path + str(x)+".jpg"))
 
 root.mainloop()

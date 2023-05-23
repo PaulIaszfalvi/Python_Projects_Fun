@@ -31,7 +31,7 @@ root.config(bg=fromRGB((100,100,100)))
 frame = Frame(root, bg='darkblue')
 # Fetch images from location and create a list of Image objects, then return.
 def getImages():
-    path = "/home/paul/Programming/Python/MyMiniProjects/Mid/MemoryGame/"
+    path = "/home/paul/Programming/Python/Python_Projects_Fun/Mid/MemoryGame"
     valid_images = [".jpg",".gif",".png",".tga"]
     
     for f in os.listdir(path):

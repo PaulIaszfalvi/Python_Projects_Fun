@@ -1,112 +1,190 @@
+import pygame
 import random
-import tkinter as tk
-from tkinter import *
-from PIL import Image, ImageTk
-import os, os.path
+import os
 
-#resize images and button
-imgButtonWidth = 100
-imgButtonHeight = 100
-imgButtonSize = (imgButtonWidth,imgButtonHeight)
-#Set the height and width of the game by number of items. 
-width = 6
-height = 6
-buttonList = []
-#Will be a 2d array of [button, id]
-answersList = []
-clickedCount = 0
-imgs = []
-hiddenImg = None
+# Configuration
+SCREEN_WIDTH = 600
+SCREEN_HEIGHT = 700
+GRID_SIZE = 4
+CARD_SIZE = 120
+MARGIN = 20
+FPS = 60
 
-#Helper function to configure background in Tkinter
-def fromRGB(rgb): 
-    return "#%02x%02x%02x" % rgb   
+# Colors
+WHITE = (255, 255, 255)
+BLACK = (0, 0, 0)
+GRAY = (100, 100, 100)
+DARK_BLUE = (20, 20, 50)
+GOLD = (255, 215, 0)
+GREEN = (0, 200, 0)
+RED = (200, 0, 0)
 
-# Create frame, set default size of frame and background color.
-root = Tk()
-root.title('Memory Game')
-root.geometry(str(imgButtonWidth * (width+1)) + "x" + str(imgButtonHeight * (height+1)))
-root.config(bg=fromRGB((100,100,100)))
+class Card:
+    def __init__(self, x, y, image, img_id):
+        self.rect = pygame.Rect(x, y, CARD_SIZE, CARD_SIZE)
+        self.image = image
+        self.img_id = img_id
+        self.is_flipped = False
+        self.is_matched = False
 
-frame = Frame(root, bg='darkblue')
-# Fetch images from location and create a list of Image objects, then return.
-def getImages():
-    path = "/home/paul/Programming/Python/Python_Projects_Fun/Mid/MemoryGame"
-    valid_images = [".jpg",".gif",".png",".tga"]
-    
-    for f in os.listdir(path):
-        ext = os.path.splitext(f)[1]
-        if ext.lower() not in valid_images:
-            continue
-        imgs.append([Image.open(os.path.join(path,f)).resize(imgButtonSize), f])
-    return imgs + imgs
+    def draw(self, screen):
+        if self.is_matched:
+            pygame.draw.rect(screen, GREEN, self.rect)
+            screen.blit(self.image, self.rect)
+        elif self.is_flipped:
+            pygame.draw.rect(screen, WHITE, self.rect)
+            screen.blit(self.image, self.rect)
+        else:
+            pygame.draw.rect(screen, DARK_BLUE, self.rect)
+            pygame.draw.rect(screen, WHITE, self.rect, 2)
 
-#Shuffle images for the game
-imgs = getImages()
-random.shuffle(imgs)
+class MemoryGame:
+    def __init__(self):
+        pygame.init()
+        self.screen = pygame.display.set_mode((SCREEN_WIDTH, SCREEN_HEIGHT))
+        pygame.display.set_caption("Memory Game - Pygame Edition")
+        self.clock = pygame.time.Clock()
+        self.font = pygame.font.SysFont("Arial", 32)
+        self.large_font = pygame.font.SysFont("Arial", 64, bold=True)
+        
+        self.path = os.path.dirname(os.path.abspath(__file__))
+        self.best_score_file = os.path.join(self.path, ".best_score")
+        self.best_score = self.load_best_score()
+        
+        self.reset_game()
 
-#Simple image to cover the tiles
-hiddenImg = ImageTk.PhotoImage(Image.new('RGB', (imgButtonWidth, imgButtonHeight), (50,50,105)))
+    def load_best_score(self):
+        try:
+            with open(self.best_score_file, "r") as f:
+                return int(f.read().strip())
+        except (FileNotFoundError, ValueError):
+            return None
 
-#Disable buttons after a match
-def disable():
-    global clickedCount, answersList
+    def save_best_score(self):
+        if self.best_score is None or self.moves < self.best_score:
+            self.best_score = self.moves
+            with open(self.best_score_file, "w") as f:
+                f.write(str(self.best_score))
 
-    clickedCount = 0
-    for a in answersList:
-        a[0].config(state=DISABLED, bg="green")    
+    def load_images(self):
+        valid_extensions = [".jpg", ".gif", ".png", ".tga"]
+        all_imgs = []
+        for f in os.listdir(self.path):
+            if any(f.lower().endswith(ext) for ext in valid_extensions):
+                img = pygame.image.load(os.path.join(self.path, f))
+                img = pygame.transform.scale(img, (CARD_SIZE, CARD_SIZE))
+                all_imgs.append((img, f))
+        
+        needed = (GRID_SIZE * GRID_SIZE) // 2
+        while len(all_imgs) < needed:
+            surf = pygame.Surface((CARD_SIZE, CARD_SIZE))
+            surf.fill((random.randint(0,255), random.randint(0,255), random.randint(0,255)))
+            all_imgs.append((surf, f"fallback_{len(all_imgs)}"))
+            
+        selected = random.sample(all_imgs, needed)
+        pairs = selected + selected
+        random.shuffle(pairs)
+        return pairs
 
-    answersList = []
+    def reset_game(self):
+        self.moves = 0
+        self.pairs_found = 0
+        self.flipped_cards = []
+        self.waiting = False
+        self.wait_timer = 0
+        self.game_over = False
+        
+        images = self.load_images()
+        self.cards = []
+        start_x = (SCREEN_WIDTH - (GRID_SIZE * (CARD_SIZE + MARGIN))) // 2
+        start_y = 100
+        
+        for i in range(GRID_SIZE):
+            for j in range(GRID_SIZE):
+                img, img_id = images.pop()
+                x = start_x + j * (CARD_SIZE + MARGIN)
+                y = start_y + i * (CARD_SIZE + MARGIN)
+                self.cards.append(Card(x, y, img, img_id))
 
-#Hide buttons again
-def hide():
-    global clickedCount, answersList  
-              
-    for answers in answersList:               
-        answers[0].config(image=hiddenImg, state=NORMAL, bg="white")#, bg="white")    
- 
-def show():
-    global answersList
+    def handle_click(self, pos):
+        if self.waiting or self.game_over:
+            return
+            
+        for card in self.cards:
+            if card.rect.collidepoint(pos) and not card.is_flipped and not card.is_matched:
+                card.is_flipped = True
+                self.flipped_cards.append(card)
+                
+                if len(self.flipped_cards) == 2:
+                    self.moves += 1
+                    self.waiting = True
+                    self.wait_timer = pygame.time.get_ticks()
+                break
 
-    for answer in answersList:
-        answer[0].config(image=answer[2], state=DISABLED) 
-        #Update the button before being hidden again
-        root.update()                
-       
-def wrong():
-    for a in answersList:
-        a[0]["bg"] = "red"
-    
-def buttonClicked(picture, id, button):
-    global clickedCount, answersList, lastbutton
-    
-    answersList.append([button, id, picture])    
-    #if button.image is hiddenImg:# and clickedCount < 2:       
-    show() 
+    def update(self):
+        if self.waiting:
+            current_time = pygame.time.get_ticks()
+            if current_time - self.wait_timer > 600:
+                c1, c2 = self.flipped_cards
+                if c1.img_id == c2.img_id:
+                    c1.is_matched = True
+                    c2.is_matched = True
+                    self.pairs_found += 1
+                    if self.pairs_found == (GRID_SIZE * GRID_SIZE) // 2:
+                        self.game_over = True
+                        self.save_best_score()
+                else:
+                    c1.is_flipped = False
+                    c2.is_flipped = False
+                
+                self.flipped_cards = []
+                self.waiting = False
 
-    if len(answersList) == 2:               
-        #Check id but make sure it's not the same button pressed twice
-        if answersList[0][1] is answersList[1][1]:#and answersList[0][0] is not answersList[1][0]:
-            disable()
-        else:           
-            wrong()             
-            button.after(600, hide())             
-            answersList = []  
+    def draw(self):
+        self.screen.fill(GRAY)
+        
+        # UI
+        moves_surf = self.font.render(f"Moves: {self.moves}", True, WHITE)
+        self.screen.blit(moves_surf, (20, 20))
+        
+        best = self.best_score if self.best_score else "--"
+        best_surf = self.font.render(f"Best: {best}", True, GOLD)
+        self.screen.blit(best_surf, (SCREEN_WIDTH - 150, 20))
+        
+        for card in self.cards:
+            card.draw(self.screen)
+            
+        if self.game_over:
+            overlay = pygame.Surface((SCREEN_WIDTH, SCREEN_HEIGHT), pygame.SRCALPHA)
+            overlay.fill((0, 0, 0, 150))
+            self.screen.blit(overlay, (0,0))
+            win_surf = self.large_font.render("YOU WIN!", True, GOLD)
+            rect = win_surf.get_rect(center=(SCREEN_WIDTH//2, SCREEN_HEIGHT//2 - 50))
+            self.screen.blit(win_surf, rect)
+            
+            hint_surf = self.font.render("Press R to Restart", True, WHITE)
+            hint_rect = hint_surf.get_rect(center=(SCREEN_WIDTH//2, SCREEN_HEIGHT//2 + 50))
+            self.screen.blit(hint_surf, hint_rect)
 
-#Create the actual buttons with their respective image 
-for h in range(height):    #print(buttons[w][::],"\n")    
-    newList = []
-    for w in range(width):        
-        tempImage = imgs.pop()
-        picture = ImageTk.PhotoImage(tempImage[0])        
-        id = tempImage[1]        
-        button = Button(frame, image=hiddenImg, state=NORMAL, height=imgButtonHeight, width=imgButtonWidth) 
-        #Need to split this up because of how python handles closures
-        button.config(command = lambda pic_temp=picture, id_temp=id, button_temp = button: buttonClicked(pic_temp, id_temp, button_temp))         
-        button.grid(row=h, column=w, padx=1, pady=1)           
-        newList.append(button)
-    buttonList.append(newList)
+        pygame.display.flip()
 
-frame.pack(expand=True) 
+    def run(self):
+        running = True
+        while running:
+            for event in pygame.event.get():
+                if event.type == pygame.QUIT:
+                    running = False
+                elif event.type == pygame.MOUSEBUTTONDOWN:
+                    self.handle_click(event.pos)
+                elif event.type == pygame.KEYDOWN:
+                    if event.key == pygame.K_r:
+                        self.reset_game()
+            
+            self.update()
+            self.draw()
+            self.clock.tick(FPS)
+        pygame.quit()
 
-root.mainloop()
+if __name__ == "__main__":
+    game = MemoryGame()
+    game.run()
